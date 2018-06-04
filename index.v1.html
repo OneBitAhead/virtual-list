@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Virtual list demo</title>
+
+<style>
+
+html, body {
+height: 100vh;
+margin: 0;
+padding: 0;
+}
+
+</style>
+
+</head>
+<body>
+
+  <script>
+    window.customElements || document.write('<script src="https://unpkg.com/@webcomponents/webcomponentsjs/webcomponents-loader.js"><\/script>')
+  </script>
+
+  <script src="dist/customelement-v1/virtual-list.js"></script>
+
+  <virtual-list itemheight="30" style="border: 1px solid red; width: 80%; height: 80vh">
+    <template>
+      <div>{{id}}</div>
+    </template>
+  </virtual-list>
+  
+<script>
+
+  const virtualList = document.body.querySelector('virtual-list');
+  
+  var setItems = function(){
+
+  let items = [];
+  for(let i = 1; i<100; i++){
+    items.push({id: i});
+  }
+  virtualList.items = items;
+  }
+
+</script>
+
+
+</body>
+</html>
