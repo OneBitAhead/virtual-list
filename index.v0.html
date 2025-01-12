@@ -19,14 +19,16 @@ padding: 0;
 </head>
 <body>
 
-  <script src="dist/customelement-v1/virtual-list.js"></script>
+  <script>
+    document.registerElement || document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/webcomponentsjs/0.7.24/CustomElements.min.js"><\/script>')
+  </script>
 
-  <template id="rowTemplate">
-    <div class="row-template">{{id}}</div>
-  </template>
+  <script src="dist/customelement-v0/virtual-list.js"></script>
 
-  <virtual-list template="#rowTemplate" itemheight="30" style="border: 1px solid red; width: 80%; height: 80vh">
-    
+  <virtual-list itemheight="30" style="border: 1px solid red; width: 80%; height: 80vh">
+    <template>
+      <div>{{id}}</div>
+    </template>
   </virtual-list>
   
 <script>
@@ -41,8 +43,6 @@ padding: 0;
   }
   virtualList.items = items;
   }
-
-  setItems();
 
 </script>
 

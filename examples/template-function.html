@@ -19,15 +19,9 @@ padding: 0;
 </head>
 <body>
 
-  <script src="dist/customelement-v1/virtual-list.js"></script>
+  <script src="../dist/customelement-v1/virtual-list.js"></script>
 
-  <template id="rowTemplate">
-    <div class="row-template">{{id}}</div>
-  </template>
-
-  <virtual-list template="#rowTemplate" itemheight="30" style="border: 1px solid red; width: 80%; height: 80vh">
-    
-  </virtual-list>
+  <virtual-list itemheight="30" style="border: 1px solid red; width: 80%; height: 80vh"></virtual-list>
   
 <script>
 
@@ -41,6 +35,8 @@ padding: 0;
   }
   virtualList.items = items;
   }
+
+  virtualList.setTemplate( function(item){ return `<section class="row-template"><div>${item.id}</div><b>Records</b></section>` } );
 
   setItems();
 

@@ -38,6 +38,8 @@ class VirtualList extends HTMLElement {
         }
         this._itemheight = ih;
         this.setAttribute('itemheight', ih.toString());
+        if (this.container)
+            this.container.style.setProperty("--itemheight", ih.toString() + 'px');
         this.onPropsChange();
         this.render();
     }
@@ -53,6 +55,7 @@ class VirtualList extends HTMLElement {
         this.innerHTML = '';
         this.style.display = 'inline-block';
         this.appendChild(container);
+        this.container.style.setProperty("--itemheight", this.itemheight.toString() + 'px');
         this.visibleItems = Math.ceil(this.clientHeight / this._itemheight);
         this._onScroll = __classPrivateFieldGet(this, _VirtualList_instances, "m", _VirtualList_debounce).call(this, this.onScrollHandler.bind(this), 50);
         this.container.addEventListener('scroll', this._onScroll);
@@ -116,7 +119,10 @@ class VirtualList extends HTMLElement {
             event.preventDefault && event.preventDefault();
         });
     }
-    getTemplate(returnNode = false) {
+    setTemplate(syncTemplateFunction) {
+        this.template = syncTemplateFunction;
+    }
+    getTemplate() {
         var tmpl;
         if (this.hasAttribute('template')) {
             tmpl = document.querySelector(this.getAttribute('template') || '');
@@ -124,13 +130,8 @@ class VirtualList extends HTMLElement {
         else {
             tmpl = this.querySelector('template');
         }
-        if (returnNode === true)
-            return tmpl;
         if (tmpl) {
             return this.templateFactory(tmpl.cloneNode(true).innerHTML.trim());
-        }
-        else {
-            throw new Error('No template defined');
         }
     }
     templateFactory(str) {
@@ -148,10 +149,8 @@ class VirtualList extends HTMLElement {
         return fn;
     }
     render() {
-        if (this.container) {
+        if (this.container && this.template) {
             this.renderChunk(this.container.scrollTop || 0);
-        }
-        else {
         }
     }
     renderChunk(scrollTop) {

@@ -43,6 +43,7 @@ class VirtualList extends HTMLElement {
     this._itemheight = ih;
 
     this.setAttribute('itemheight', ih.toString());
+    if(this.container) this.container.style.setProperty("--itemheight", ih.toString() + 'px');
 
     this.onPropsChange();
     this.render();
@@ -81,6 +82,8 @@ class VirtualList extends HTMLElement {
     this.innerHTML = '';
     this.style.display = 'inline-block';
     this.appendChild(container)
+
+    this.container.style.setProperty("--itemheight", this.itemheight.toString() + 'px');
 
     // Calculate number of visible items
     // @TODO: ResizeObserver
@@ -188,8 +191,11 @@ class VirtualList extends HTMLElement {
 
   }
 
+  setTemplate( syncTemplateFunction: (item:any) => string ){
+    this.template = syncTemplateFunction
+  }
 
-  getTemplate(returnNode:boolean = false) {
+  getTemplate() {
 
     var tmpl: HTMLElement|null;
     if(this.hasAttribute('template')){
@@ -198,15 +204,10 @@ class VirtualList extends HTMLElement {
       // Read markup from <template/> tag of innerHTML
       tmpl = this.querySelector('template');
     }
-
-    if(returnNode === true) return tmpl;
-
     
     if (tmpl) {
       //@ts-ignore
       return this.templateFactory(tmpl.cloneNode(true).innerHTML.trim());
-    } else {
-      throw new Error('No template defined');
     }
 
   }
@@ -239,12 +240,8 @@ class VirtualList extends HTMLElement {
 
   render() {
 
-    // console.log('render')
-
-    if (this.container) {
+    if (this.container && this.template) {
       this.renderChunk(this.container.scrollTop || 0);
-    } else {
-      // console.log('no container')
     }
   }
 
