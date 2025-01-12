@@ -1,9 +1,15 @@
 "use strict";
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _VirtualList_instances, _VirtualList_debounce;
 class VirtualList extends HTMLElement {
     constructor() {
         super(...arguments);
+        _VirtualList_instances.add(this);
         this.visibleItems = 0;
-        this.ticking = false;
         this.lastRepaintY = 0;
         this._items = [];
         this._itemheight = 0;
@@ -15,7 +21,6 @@ class VirtualList extends HTMLElement {
         return this._itemheight || 20;
     }
     set items(value) {
-        console.log('setter for items');
         if (value == null)
             return;
         if (!Array.isArray(value))
@@ -38,18 +43,18 @@ class VirtualList extends HTMLElement {
     }
     connectedCallback() {
         this._items = [];
-        this.ticking = false;
         this.lastRepaintY = 0;
         this.visibleItems = 0;
         const container = this.createContainer();
         const scroller = this.createScroller(this._itemheight * this._items.length);
         container.appendChild(scroller);
         this.container = container;
+        this.template = this.getTemplate();
         this.innerHTML = '';
         this.style.display = 'inline-block';
         this.appendChild(container);
         this.visibleItems = Math.ceil(this.clientHeight / this._itemheight);
-        this._onScroll = this.onScrollHandler.bind(this);
+        this._onScroll = __classPrivateFieldGet(this, _VirtualList_instances, "m", _VirtualList_debounce).call(this, this.onScrollHandler.bind(this), 50);
         this.container.addEventListener('scroll', this._onScroll);
     }
     disconnectCallback() {
@@ -100,22 +105,27 @@ class VirtualList extends HTMLElement {
         this.visibleItems = Math.ceil(this.clientHeight / this._itemheight);
     }
     onScrollHandler(event) {
-        if (!this.ticking) {
-            window.requestAnimationFrame(() => {
-                if (!event.target)
-                    return;
-                var scrollTop = (event.target).scrollTop;
-                if (!this.lastRepaintY || Math.abs(scrollTop - this.lastRepaintY) > (Math.ceil(this.clientHeight * 0.8))) {
-                    this.renderChunk(scrollTop);
-                    this.lastRepaintY = scrollTop;
-                }
-                event.preventDefault && event.preventDefault();
-            });
-            this.ticking = true;
-        }
+        window.requestAnimationFrame(() => {
+            if (!event.target)
+                return;
+            var scrollTop = (event.target).scrollTop;
+            if (!this.lastRepaintY || Math.abs(scrollTop - this.lastRepaintY) > (Math.ceil(this.clientHeight * 0.8))) {
+                this.renderChunk(scrollTop);
+                this.lastRepaintY = scrollTop;
+            }
+            event.preventDefault && event.preventDefault();
+        });
     }
-    getTemplate() {
-        let tmpl = this.querySelector('template');
+    getTemplate(returnNode = false) {
+        var tmpl;
+        if (this.hasAttribute('template')) {
+            tmpl = document.querySelector(this.getAttribute('template') || '');
+        }
+        else {
+            tmpl = this.querySelector('template');
+        }
+        if (returnNode === true)
+            return tmpl;
         if (tmpl) {
             return this.templateFactory(tmpl.cloneNode(true).innerHTML.trim());
         }
@@ -138,12 +148,10 @@ class VirtualList extends HTMLElement {
         return fn;
     }
     render() {
-        console.log('render');
         if (this.container) {
             this.renderChunk(this.container.scrollTop || 0);
         }
         else {
-            console.log('no container');
         }
     }
     renderChunk(scrollTop) {
@@ -153,13 +161,11 @@ class VirtualList extends HTMLElement {
             const chunkData = { items: this._items.slice(firstRenderedItem, firstRenderedItem + (this.visibleItems * 3)) };
             var div = document.createElement('div');
             var chunkMarkup = '';
-            console.log('chunkData', chunkData);
             if (!this.template) {
                 this.template = this.getTemplate();
             }
             chunkData.items.forEach((item) => {
                 let markup = this.template(item);
-                console.log('item markup', markup);
                 if (markup)
                     chunkMarkup = chunkMarkup + markup;
             });
@@ -172,7 +178,9 @@ class VirtualList extends HTMLElement {
                     Object.assign(div.children[c].style, {
                         height: this._itemheight + 'px',
                         position: 'absolute',
-                        top: (i * this._itemheight) + 'px'
+                        top: (i * this._itemheight) + 'px',
+                        left: '0px',
+                        right: '0px'
                     });
                     i++;
                 }
@@ -184,8 +192,24 @@ class VirtualList extends HTMLElement {
             this.container.innerHTML = div.innerHTML;
         }
         else {
-            console.log('bah', this.template, this.container);
         }
     }
 }
+_VirtualList_instances = new WeakSet(), _VirtualList_debounce = function _VirtualList_debounce(func, wait, immediate = false) {
+    var timeout;
+    return function () {
+        var context = globalThis, args = arguments;
+        var later = function () {
+            timeout = null;
+            if (!immediate)
+                func.apply(context, args);
+        };
+        var callNow = immediate && !timeout;
+        if (timeout)
+            clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow)
+            func.apply(context, args);
+    };
+};
 window.customElements.define('virtual-list', VirtualList);

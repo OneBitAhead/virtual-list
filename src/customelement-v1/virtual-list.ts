@@ -5,7 +5,6 @@ class VirtualList extends HTMLElement {
   //@ts-ignore
   private container: HTMLElement;
 
-  private ticking: boolean = false;
   private lastRepaintY: number = 0;
 
   private _items: any[] = [];
@@ -23,7 +22,7 @@ class VirtualList extends HTMLElement {
 
   set items(value) {
 
-    console.log('setter for items');
+    // console.log('setter for items');
 
     if (value == null) return
     if (!Array.isArray(value)) value = [].concat(value);
@@ -60,17 +59,23 @@ class VirtualList extends HTMLElement {
 
     // Init internal properties
     this._items = [];
-    this.ticking = false;
     this.lastRepaintY = 0;
     this.visibleItems = 0;
 
+
     // Create DOM skeleton
     const container = this.createContainer();
+
+    // console.log('createScroller', this._itemheight, this._items.length)
+
     const scroller = this.createScroller(this._itemheight * this._items.length);
     container.appendChild(scroller);
     this.container = container;
 
-    //this.template = this.getTemplate();
+
+    // console.log('connectedCallback', this.container)
+
+    this.template = this.getTemplate();
 
     // Clear innerHTML & render container
     this.innerHTML = '';
@@ -82,7 +87,7 @@ class VirtualList extends HTMLElement {
     this.visibleItems = Math.ceil(this.clientHeight / this._itemheight);
 
     // Add scroll handler
-    this._onScroll = this.onScrollHandler.bind(this);
+    this._onScroll = this.#debounce(this.onScrollHandler.bind(this), 50);
     this.container.addEventListener('scroll', this._onScroll);
 
   }
@@ -146,38 +151,57 @@ class VirtualList extends HTMLElement {
 
   }
 
+  // https://davidwalsh.name/javascript-debounce-function
+  #debounce(func:Function, wait:number, immediate=false) {
+    var timeout: number|null;
+    return function() {
+      var context = globalThis, args = arguments;
+      var later = function() {
+        timeout = null;
+        if (!immediate) func.apply(context, args);
+      };
+      var callNow = immediate && !timeout;
+      if(timeout)clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+      if (callNow) func.apply(context, args);
+    };
+  }
+
   onScrollHandler(event: Event) {
 
-    if (!this.ticking) {
+    window.requestAnimationFrame(() => {
 
-      window.requestAnimationFrame(() => {
+      if (!event.target) return;
 
-        if (!event.target) return;
+      var scrollTop = (<HTMLElement>(event.target)).scrollTop;
 
-        var scrollTop = (<HTMLElement>(event.target)).scrollTop;
+      if (!this.lastRepaintY || Math.abs(scrollTop - this.lastRepaintY) > (Math.ceil(this.clientHeight * 0.8))) {
 
-        if (!this.lastRepaintY || Math.abs(scrollTop - this.lastRepaintY) > (Math.ceil(this.clientHeight * 0.8))) {
+        this.renderChunk(scrollTop);
+        this.lastRepaintY = scrollTop;
 
-          this.renderChunk(scrollTop);
-          this.lastRepaintY = scrollTop;
+      }
 
-        }
+      event.preventDefault && event.preventDefault();
 
-        event.preventDefault && event.preventDefault();
-
-      });
-
-      this.ticking = true;
-
-    }
+    });
 
   }
 
 
-  getTemplate() {
+  getTemplate(returnNode:boolean = false) {
 
-    // Read markup from <template/> tag of innerHTML
-    let tmpl = this.querySelector('template');
+    var tmpl: HTMLElement|null;
+    if(this.hasAttribute('template')){
+      tmpl = document.querySelector(this.getAttribute('template')||'');
+    } else {
+      // Read markup from <template/> tag of innerHTML
+      tmpl = this.querySelector('template');
+    }
+
+    if(returnNode === true) return tmpl;
+
+    
     if (tmpl) {
       //@ts-ignore
       return this.templateFactory(tmpl.cloneNode(true).innerHTML.trim());
@@ -215,12 +239,12 @@ class VirtualList extends HTMLElement {
 
   render() {
 
-    console.log('render')
+    // console.log('render')
 
     if (this.container) {
       this.renderChunk(this.container.scrollTop || 0);
     } else {
-      console.log('no container')
+      // console.log('no container')
     }
   }
 
@@ -230,6 +254,8 @@ class VirtualList extends HTMLElement {
     let firstVisibleItem = Math.max(Math.ceil(scrollTop / this._itemheight), 0);
     let firstRenderedItem = Math.max(firstVisibleItem - this.visibleItems, 0);
 
+    // console.log('renderChunk', {scrollTop, firstVisibleItem, firstRenderedItem});
+
     if (this.template && this.container) {
 
       const chunkData = { items: this._items.slice(firstRenderedItem, firstRenderedItem + (this.visibleItems * 3)) };
@@ -238,7 +264,7 @@ class VirtualList extends HTMLElement {
       var div = document.createElement('div');
       var chunkMarkup = '';
 
-      console.log('chunkData', chunkData);
+      // console.log('chunkData', chunkData);
 
       if (!this.template) {
         this.template = this.getTemplate();
@@ -248,7 +274,7 @@ class VirtualList extends HTMLElement {
 
         let markup = this.template(item);
 
-        console.log('item markup', markup);
+        // console.log('item markup', markup);
         if (markup) chunkMarkup = chunkMarkup + markup;
 
       });
@@ -265,7 +291,9 @@ class VirtualList extends HTMLElement {
           Object.assign(div.children[c].style, {
             height: this._itemheight + 'px',
             position: 'absolute',
-            top: (i * this._itemheight) + 'px'
+            top: (i * this._itemheight) + 'px',
+            left: '0px',
+            right: '0px'
           });
 
           i++;
@@ -281,7 +309,7 @@ class VirtualList extends HTMLElement {
       this.container.innerHTML = div.innerHTML;
 
     } else {
-      console.log('bah', this.template, this.container);
+      // console.log('bah', this.template, this.container);
     }
 
   }
